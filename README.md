@@ -74,3 +74,40 @@ AI Freelance Manager — это PWA-приложение, которое:
 Freemium: до 3 документов/мес.
 
 Pro: 5 €/мес. — безлимит, AI-помощь, брендирование
+
+## Quick start
+
+### Backend (FastAPI)
+
+```bash
+# from repo root
+source .venv/bin/activate  # if not active
+./backend/run_dev.sh       # starts on http://localhost:8000
+```
+
+Endpoints:
+- `GET /health`
+- `POST /categories`, `GET /categories`
+- `POST /transactions`, `GET /transactions`
+- `GET /balance`
+- `GET /report/month?year=2025&month=9`
+- `GET /export/csv`
+
+### Frontend (Vite React TS)
+
+```bash
+cd frontend
+npm install
+npm run dev  # http://localhost:5173
+```
+
+Set API base via `.env` in `frontend`:
+```
+VITE_API_BASE=http://localhost:8000
+```
+
+Minimal features:
+- Add transactions with amount, note, category
+- Seed default categories
+- Show recent transactions and current balance
+- Monthly pie chart and CSV export
