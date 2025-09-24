@@ -1,0 +1,26 @@
+{
+  "name": "AI Freelance Manager",
+  "short_name": "Finance App",
+  "description": "Personal finance tracker for income and expenses",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#2f2f3a",
+  "theme_color": "#2f2f3a",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["finance", "productivity"],
+  "lang": "en"
+}
