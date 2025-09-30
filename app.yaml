@@ -1,0 +1,45 @@
+runtime: python311
+
+env_variables:
+  # Database configuration
+  DATABASE_URL: "postgresql://username:password@/database_name?host=/cloudsql/ai-freelance-manager:europe-west:ai-freelance-manager-db"
+  
+  # CORS settings
+  ALLOWED_ORIGINS: "https://your-frontend-domain.com,https://your-app-domain.com"
+
+# Automatic scaling
+automatic_scaling:
+  min_instances: 1
+  max_instances: 10
+  target_cpu_utilization: 0.6
+
+# Health check
+readiness_check:
+  path: "/health"
+  check_interval_sec: 5
+  timeout_sec: 4
+  failure_threshold: 2
+  success_threshold: 2
+
+liveness_check:
+  path: "/health"
+  check_interval_sec: 30
+  timeout_sec: 4
+  failure_threshold: 2
+  success_threshold: 2
+
+# Cloud SQL connection
+beta_settings:
+  cloud_sql_instances: "ai-freelance-manager:europe-west:ai-freelance-manager-db"
+
+# Static files handling
+handlers:
+  # Serve static files from frontend
+  - url: /static
+    static_dir: frontend/dist
+    secure: always
+    
+  # API routes
+  - url: /.*
+    script: auto
+    secure: always
