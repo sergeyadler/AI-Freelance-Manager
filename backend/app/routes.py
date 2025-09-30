@@ -1,6 +1,7 @@
 from datetime import datetime
 from calendar import monthrange
 from io import StringIO
+import pytz
 
 import pandas as pd
 from fastapi import APIRouter, Depends, HTTPException
@@ -82,6 +83,24 @@ def list_categories(db: Session = Depends(get_db)):
     return db.scalars(select(Category).order_by(Category.name)).all()
 
 
+@router.put("/categories/{category_id}", response_model=CategorySchema)
+def update_category(category_id: int, payload: CategoryCreate, db: Session = Depends(get_db)):
+    category = db.get(Category, category_id)
+    if not category:
+        raise HTTPException(status_code=404, detail="Not found")
+    
+    # Check if another category with the same name exists (excluding current category)
+    existing = db.scalar(select(Category).where(Category.name == payload.name, Category.id != category_id))
+    if existing:
+        raise HTTPException(status_code=409, detail="Category with this name already exists")
+    
+    category.name = payload.name
+    category.type = payload.type
+    db.commit()
+    db.refresh(category)
+    return category
+
+
 @router.delete("/categories/{category_id}")
 def delete_category(category_id: int, db: Session = Depends(get_db)):
     category = db.get(Category, category_id)
@@ -115,6 +134,31 @@ def list_transactions(db: Session = Depends(get_db)):
     return db.scalars(select(Transaction).order_by(Transaction.created_at.desc())).all()
 
 
+@router.put("/transactions/{transaction_id}", response_model=TransactionSchema)
+def update_transaction(transaction_id: int, payload: TransactionCreate, db: Session = Depends(get_db)):
+    t = db.get(Transaction, transaction_id)
+    if not t:
+        raise HTTPException(status_code=404, detail="Not found")
+    
+    # Validate category exists
+    category = db.get(Category, payload.category_id)
+    if not category:
+        raise HTTPException(status_code=400, detail="Invalid category")
+    
+    # Update transaction fields
+    t.amount = payload.amount
+    t.note = payload.note
+    t.category_id = payload.category_id
+    if payload.created_at:
+        t.created_at = payload.created_at
+    else:
+        t.created_at = datetime.utcnow()
+    
+    db.commit()
+    db.refresh(t)
+    return t
+
+
 @router.delete("/transactions/{transaction_id}")
 def delete_transaction(transaction_id: int, db: Session = Depends(get_db)):
     t = db.get(Transaction, transaction_id)
@@ -133,9 +177,21 @@ def get_balance(db: Session = Depends(get_db)):
 
 
 @router.get("/report/month")
-def report_month(year: int, month: int, type: str | None = None, db: Session = Depends(get_db)):
-    start = datetime(year, month, 1)
-    end = datetime(year, month, monthrange(year, month)[1], 23, 59, 59)
+def report_month(year: int, month: int, type: str | None = None, timezone: str = "UTC", db: Session = Depends(get_db)):
+    # Convert local month to UTC for proper timezone handling
+    try:
+        tz = pytz.timezone(timezone)
+        _, last_day = monthrange(year, month)
+        local_start = datetime(year, month, 1, 0, 0, 0)
+        local_end = datetime(year, month, last_day, 23, 59, 59)
+        
+        # Convert to UTC
+        start = tz.localize(local_start).astimezone(pytz.UTC).replace(tzinfo=None)
+        end = tz.localize(local_end).astimezone(pytz.UTC).replace(tzinfo=None)
+    except pytz.exceptions.UnknownTimeZoneError:
+        # Fallback to UTC if timezone is invalid
+        start = datetime(year, month, 1)
+        end = datetime(year, month, monthrange(year, month)[1], 23, 59, 59)
     stmt = (
         select(Category.name, Category.type, func.sum(Transaction.amount).label("total"))
         .join(Category)
@@ -153,9 +209,20 @@ def report_month(year: int, month: int, type: str | None = None, db: Session = D
 
 
 @router.get("/report/day")
-def report_day(year: int, month: int, day: int, type: str | None = None, db: Session = Depends(get_db)):
-    start = datetime(year, month, day, 0, 0, 0)
-    end = datetime(year, month, day, 23, 59, 59)
+def report_day(year: int, month: int, day: int, type: str | None = None, timezone: str = "UTC", db: Session = Depends(get_db)):
+    # Convert local date to UTC for proper timezone handling
+    try:
+        tz = pytz.timezone(timezone)
+        local_start = datetime(year, month, day, 0, 0, 0)
+        local_end = datetime(year, month, day, 23, 59, 59)
+        
+        # Convert to UTC
+        start = tz.localize(local_start).astimezone(pytz.UTC).replace(tzinfo=None)
+        end = tz.localize(local_end).astimezone(pytz.UTC).replace(tzinfo=None)
+    except pytz.exceptions.UnknownTimeZoneError:
+        # Fallback to UTC if timezone is invalid
+        start = datetime(year, month, day, 0, 0, 0)
+        end = datetime(year, month, day, 23, 59, 59)
     stmt = (
         select(Category.name, Category.type, func.sum(Transaction.amount).label("total"))
         .join(Category)
