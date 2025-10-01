@@ -1,11 +1,13 @@
 runtime: python311
 
+entrypoint: uvicorn backend.app.main:app --host 0.0.0.0 --port $PORT
+
 env_variables:
   # Database configuration
-  DATABASE_URL: "postgresql://username:password@/database_name?host=/cloudsql/ai-freelance-manager:europe-west:ai-freelance-manager-db"
+  DATABASE_URL: "postgresql://app-user:AppUserPassword123!@/ai_freelance_manager?host=/cloudsql/ai-freelance-manager:europe-west1:ai-freelance-manager-db"
   
-  # CORS settings
-  ALLOWED_ORIGINS: "https://your-frontend-domain.com,https://your-app-domain.com"
+  # CORS settings (allow same domain and localhost for development)
+  ALLOWED_ORIGINS: "*"
 
 # Automatic scaling
 automatic_scaling:
@@ -30,15 +32,10 @@ liveness_check:
 
 # Cloud SQL connection
 beta_settings:
-  cloud_sql_instances: "ai-freelance-manager:europe-west:ai-freelance-manager-db"
+  cloud_sql_instances: "ai-freelance-manager:europe-west1:ai-freelance-manager-db"
 
 # Static files handling
 handlers:
-  # Serve static files from frontend
-  - url: /static
-    static_dir: frontend/dist
-    secure: always
-    
   # API routes
   - url: /.*
     script: auto

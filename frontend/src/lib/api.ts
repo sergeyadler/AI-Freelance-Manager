@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-export const API_BASE = import.meta.env.VITE_API_BASE || 'http://192.168.178.67:8000';
+export const API_BASE = import.meta.env.VITE_API_BASE || 'https://ai-freelance-manager.ew.r.appspot.com';
 
 export type Category = { id: number; name: string; type: 'income' | 'expense' };
 export type Transaction = {
