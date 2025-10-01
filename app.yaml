@@ -1,0 +1,42 @@
+runtime: python311
+
+entrypoint: uvicorn backend.app.main:app --host 0.0.0.0 --port $PORT
+
+env_variables:
+  # Database configuration
+  DATABASE_URL: "postgresql://app-user:AppUserPassword123!@/ai_freelance_manager?host=/cloudsql/ai-freelance-manager:europe-west1:ai-freelance-manager-db"
+  
+  # CORS settings (allow same domain and localhost for development)
+  ALLOWED_ORIGINS: "*"
+
+# Automatic scaling
+automatic_scaling:
+  min_instances: 1
+  max_instances: 10
+  target_cpu_utilization: 0.6
+
+# Health check
+readiness_check:
+  path: "/health"
+  check_interval_sec: 5
+  timeout_sec: 4
+  failure_threshold: 2
+  success_threshold: 2
+
+liveness_check:
+  path: "/health"
+  check_interval_sec: 30
+  timeout_sec: 4
+  failure_threshold: 2
+  success_threshold: 2
+
+# Cloud SQL connection
+beta_settings:
+  cloud_sql_instances: "ai-freelance-manager:europe-west1:ai-freelance-manager-db"
+
+# Static files handling
+handlers:
+  # API routes
+  - url: /.*
+    script: auto
+    secure: always

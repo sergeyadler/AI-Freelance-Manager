@@ -17,7 +17,7 @@ const Header: React.FC<HeaderProps> = ({
       {(view === 'entry' || view === 'chart') ? <div className="topbar">
         <button 
           onClick={() => setShowMenuModal(true)}
-          style={{ justifySelf: 'start', background: 'none', border: 'none', color: '#e8e8f0', cursor: 'pointer' }}
+          style={{ justifySelf: 'start', background: 'none', border: 'none', color: '#e8e8f0', cursor: 'pointer', padding: 0 }}
         >
           <Menu size={24} />
         </button>
@@ -28,7 +28,7 @@ const Header: React.FC<HeaderProps> = ({
         
         <button 
           onClick={() => setView(view === 'entry' ? 'chart' : 'entry')}
-          style={{ justifySelf: 'end', background: 'none', border: 'none', color: '#e8e8f0', cursor: 'pointer' }}
+          style={{ justifySelf: 'end', background: 'none', border: 'none', color: '#e8e8f0', cursor: 'pointer', padding: 0 }}
         >
           <ChartPie size={24} />
         </button>
@@ -36,7 +36,7 @@ const Header: React.FC<HeaderProps> = ({
         <div className="topbar">
           <button 
             onClick={goBack}
-            style={{ justifySelf: 'start', background: 'none', border: 'none', color: '#e8e8f0', cursor: 'pointer' }}
+            style={{ justifySelf: 'start', background: 'none', border: 'none', color: '#e8e8f0', cursor: 'pointer', padding: 0 }}
           >
             <ChevronLeft size={24} />
           </button>
