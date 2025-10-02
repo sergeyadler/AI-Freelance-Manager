@@ -1,31 +1,52 @@
 from datetime import datetime
-from sqlalchemy import Integer, String, DateTime, ForeignKey, Numeric
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy import Integer, String, DateTime, ForeignKey, Numeric, Boolean, Column
+from sqlalchemy.orm import relationship
 
 from .db import Base
+
+
+class User(Base):
+    __tablename__ = "users"
+
+    id = Column(Integer, primary_key=True, index=True)
+    email = Column(String(255), unique=True, index=True)
+    hashed_password = Column(String(255))
+    full_name = Column(String(255), nullable=True)
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    # Relationships
+    categories = relationship("Category", back_populates="user", cascade="all, delete-orphan")
+    transactions = relationship("Transaction", back_populates="user", cascade="all, delete-orphan")
 
 
 class Category(Base):
     __tablename__ = "categories"
 
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
-    name: Mapped[str] = mapped_column(String(100), unique=True, index=True)
-    type: Mapped[str] = mapped_column(String(10), index=True)  # income | expense
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(100), index=True)
+    type = Column(String(10), index=True)  # income | expense
+    user_id = Column(ForeignKey("users.id"), nullable=False, index=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
 
-    transactions: Mapped[list["Transaction"]] = relationship(
-        back_populates="category", cascade="all, delete-orphan"
-    )
+    # Relationships
+    user = relationship("User", back_populates="categories")
+    transactions = relationship("Transaction", back_populates="category", cascade="all, delete-orphan")
 
 
 class Transaction(Base):
     __tablename__ = "transactions"
 
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
-    amount: Mapped[float] = mapped_column(Numeric(12, 2))
-    note: Mapped[str | None] = mapped_column(String(255), nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, index=True)
+    id = Column(Integer, primary_key=True, index=True)
+    amount = Column(Numeric(12, 2))
+    note = Column(String(255), nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)
 
-    category_id: Mapped[int] = mapped_column(ForeignKey("categories.id"))
-    category: Mapped[Category] = relationship(back_populates="transactions")
+    category_id = Column(ForeignKey("categories.id"))
+    user_id = Column(ForeignKey("users.id"), index=True)
+
+    # Relationships
+    category = relationship("Category", back_populates="transactions")
+    user = relationship("User", back_populates="transactions")
 
 

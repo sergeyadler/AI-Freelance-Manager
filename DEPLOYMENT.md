@@ -84,20 +84,10 @@ cd ..
 gcloud app deploy app.yaml
 ```
 
-#### Frontend (Firebase Hosting)
-```bash
-# Install Firebase CLI
-npm install -g firebase-tools
-
-# Login to Firebase
-firebase login
-
-# Initialize Firebase project
-firebase init hosting
-
-# Deploy frontend
-firebase deploy --only hosting
-```
+#### Frontend (App Engine - Same Deployment)
+The frontend is now deployed together with the backend on App Engine.
+The static files are served directly from the `frontend/dist` directory.
+Just run the backend deployment and the frontend will be included automatically.
 
 ## Environment Variables
 
@@ -181,9 +171,9 @@ gcloud app versions delete OLD_VERSION_ID
    - Monitor usage and scale up as needed
    - Consider stopping instances during development
 
-3. **Firebase Hosting**
-   - Free tier includes 10GB storage
-   - Monitor bandwidth usage
+3. **Storage**
+   - Frontend assets are served from App Engine
+   - Monitor bandwidth usage in Cloud Console
 
 ## Next Steps
 

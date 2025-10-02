@@ -10,8 +10,6 @@ const Header: React.FC<HeaderProps> = ({
     activeType,
 }) => {
 
-
-
   return (
     <div style={{ padding: '20px' }}>
       {(view === 'entry' || view === 'chart') ? <div className="topbar">

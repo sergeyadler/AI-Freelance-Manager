@@ -11,67 +11,34 @@ from sqlalchemy.orm import Session
 
 from .db import get_db, Base, engine
 from .models import Category, Transaction
-from .schemas import Category as CategorySchema
-from .schemas import CategoryCreate, Transaction as TransactionSchema, TransactionCreate, Balance
+from .schemas import (
+    CategorySchema,
+    CategoryCreate,
+    TransactionSchema,
+    TransactionCreate,
+    TransactionUpdate,
+    Balance
+)
+from .auth import get_current_user
+from .models import User
 
 
 router = APIRouter()
 
 
 def init_db():
-    Base.metadata.create_all(bind=engine)
-    # Preload default categories (idempotent)
-    defaults: list[tuple[str, str]] = [
-        # Income (5)
-        ("Salary", "income"),
-        ("Business", "income"),
-        ("Dividends", "income"),
-        ("Gifts", "income"),
-        ("Other income", "income"),
-        # Expenses from provided list
-        ("Food", "expense"),
-        ("Eating Out", "expense"),
-        ("Clothes", "expense"),
-        ("Sport", "expense"),
-        ("Car", "expense"),
-        ("Household", "expense"),
-        ("Relaxation", "expense"),
-        ("Mobile", "expense"),
-        ("Internet", "expense"),
-        ("Insurance", "expense"),
-        ("Finance", "expense"),
-        ("DM", "expense"),
-        ("Home", "expense"),
-        ("Personal care", "expense"),
-        ("Electronics", "expense"),
-        ("Travel", "expense"),
-        ("Sharing", "expense"),
-        ("Charity", "expense"),
-        ("Medication", "expense"),
-        ("Education", "expense"),
-        ("Investing", "expense"),
-        ("Pets", "expense"),
-        ("Hobbys", "expense"),
-        ("Other", "expense"),
-        ("Children", "expense"),
-        ("Presents", "expense"),
-    ]
-    from sqlalchemy.orm import Session
-
-    with Session(engine) as db:
-        existing = {name for (name,) in db.execute(select(Category.name)).all()}
-        for name, type_ in defaults:
-            if name not in existing:
-                db.add(Category(name=name, type=type_))
-        db.commit()
+    """Initialize the database - no default categories needed since they're created per user."""
+    # Database is initialized with proper schema, no default data needed
+    pass
 
 
 @router.post("/categories", response_model=CategorySchema)
-def create_category(payload: CategoryCreate, db: Session = Depends(get_db)):
-    existing = db.scalar(select(Category).where(Category.name == payload.name))
+def create_category(payload: CategoryCreate, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """Create a new category for the current user"""
+    existing = db.scalar(select(Category).where(Category.name == payload.name, Category.user_id == current_user.id))
     if existing:
         raise HTTPException(status_code=409, detail="Category already exists")
-    category = Category(name=payload.name, type=payload.type)
+    category = Category(name=payload.name, type=payload.type, user_id=current_user.id)
     db.add(category)
     db.commit()
     db.refresh(category)
@@ -79,18 +46,20 @@ def create_category(payload: CategoryCreate, db: Session = Depends(get_db)):
 
 
 @router.get("/categories", response_model=list[CategorySchema])
-def list_categories(db: Session = Depends(get_db)):
-    return db.scalars(select(Category).order_by(Category.name)).all()
+def list_categories(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """Get categories for the current user"""
+    return db.scalars(select(Category).where(Category.user_id == current_user.id).order_by(Category.name)).all()
 
 
 @router.put("/categories/{category_id}", response_model=CategorySchema)
-def update_category(category_id: int, payload: CategoryCreate, db: Session = Depends(get_db)):
-    category = db.get(Category, category_id)
+def update_category(category_id: int, payload: CategoryCreate, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """Update a category for the current user"""
+    category = db.scalar(select(Category).where(Category.id == category_id, Category.user_id == current_user.id))
     if not category:
         raise HTTPException(status_code=404, detail="Not found")
     
     # Check if another category with the same name exists (excluding current category)
-    existing = db.scalar(select(Category).where(Category.name == payload.name, Category.id != category_id))
+    existing = db.scalar(select(Category).where(Category.name == payload.name, Category.id != category_id, Category.user_id == current_user.id))
     if existing:
         raise HTTPException(status_code=409, detail="Category with this name already exists")
     
@@ -102,8 +71,9 @@ def update_category(category_id: int, payload: CategoryCreate, db: Session = Dep
 
 
 @router.delete("/categories/{category_id}")
-def delete_category(category_id: int, db: Session = Depends(get_db)):
-    category = db.get(Category, category_id)
+def delete_category(category_id: int, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """Delete a category for the current user"""
+    category = db.scalar(select(Category).where(Category.id == category_id, Category.user_id == current_user.id))
     if not category:
         raise HTTPException(status_code=404, detail="Not found")
     db.delete(category)
@@ -112,16 +82,20 @@ def delete_category(category_id: int, db: Session = Depends(get_db)):
 
 
 @router.post("/transactions", response_model=TransactionSchema)
-def create_transaction(payload: TransactionCreate, db: Session = Depends(get_db)):
-    category = db.get(Category, payload.category_id)
+def create_transaction(payload: TransactionCreate, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """Create a new transaction for the current user"""
+    # Verify the category belongs to the current user
+    category = db.scalar(select(Category).where(Category.id == payload.category_id, Category.user_id == current_user.id))
     if not category:
         raise HTTPException(status_code=400, detail="Invalid category")
+    
     created_at = payload.created_at or datetime.utcnow()
     t = Transaction(
         amount=payload.amount,
         note=payload.note,
         created_at=created_at,
         category_id=payload.category_id,
+        user_id=current_user.id
     )
     db.add(t)
     db.commit()
@@ -130,18 +104,20 @@ def create_transaction(payload: TransactionCreate, db: Session = Depends(get_db)
 
 
 @router.get("/transactions", response_model=list[TransactionSchema])
-def list_transactions(db: Session = Depends(get_db)):
-    return db.scalars(select(Transaction).order_by(Transaction.created_at.desc())).all()
+def list_transactions(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """Get transactions for the current user"""
+    return db.scalars(select(Transaction).where(Transaction.user_id == current_user.id).order_by(Transaction.created_at.desc())).all()
 
 
 @router.put("/transactions/{transaction_id}", response_model=TransactionSchema)
-def update_transaction(transaction_id: int, payload: TransactionCreate, db: Session = Depends(get_db)):
-    t = db.get(Transaction, transaction_id)
+def update_transaction(transaction_id: int, payload: TransactionCreate, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """Update a transaction for the current user"""
+    t = db.scalar(select(Transaction).where(Transaction.id == transaction_id, Transaction.user_id == current_user.id))
     if not t:
         raise HTTPException(status_code=404, detail="Not found")
     
-    # Validate category exists
-    category = db.get(Category, payload.category_id)
+    # Validate category belongs to current user
+    category = db.scalar(select(Category).where(Category.id == payload.category_id, Category.user_id == current_user.id))
     if not category:
         raise HTTPException(status_code=400, detail="Invalid category")
     
@@ -160,8 +136,9 @@ def update_transaction(transaction_id: int, payload: TransactionCreate, db: Sess
 
 
 @router.delete("/transactions/{transaction_id}")
-def delete_transaction(transaction_id: int, db: Session = Depends(get_db)):
-    t = db.get(Transaction, transaction_id)
+def delete_transaction(transaction_id: int, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """Delete a transaction for the current user"""
+    t = db.scalar(select(Transaction).where(Transaction.id == transaction_id, Transaction.user_id == current_user.id))
     if not t:
         raise HTTPException(status_code=404, detail="Not found")
     db.delete(t)
@@ -170,14 +147,16 @@ def delete_transaction(transaction_id: int, db: Session = Depends(get_db)):
 
 
 @router.get("/balance", response_model=Balance)
-def get_balance(db: Session = Depends(get_db)):
-    income = db.scalar(select(func.coalesce(func.sum(Transaction.amount), 0)).join(Category).where(Category.type == "income")) or 0
-    expense = db.scalar(select(func.coalesce(func.sum(Transaction.amount), 0)).join(Category).where(Category.type == "expense")) or 0
+def get_balance(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """Get balance for the current user"""
+    income = db.scalar(select(func.coalesce(func.sum(Transaction.amount), 0)).join(Category).where(Category.type == "income", Transaction.user_id == current_user.id)) or 0
+    expense = db.scalar(select(func.coalesce(func.sum(Transaction.amount), 0)).join(Category).where(Category.type == "expense", Transaction.user_id == current_user.id)) or 0
     return Balance(income=float(income), expense=float(expense), net=float(income) - float(expense))
 
 
 @router.get("/report/month")
-def report_month(year: int, month: int, type: str | None = None, timezone: str = "UTC", db: Session = Depends(get_db)):
+def report_month(year: int, month: int, type: str | None = None, timezone: str = "UTC", current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """Get monthly report for the current user"""
     # Convert local month to UTC for proper timezone handling
     try:
         tz = pytz.timezone(timezone)
@@ -195,7 +174,7 @@ def report_month(year: int, month: int, type: str | None = None, timezone: str =
     stmt = (
         select(Category.name, Category.type, func.sum(Transaction.amount).label("total"))
         .join(Category)
-        .where(Transaction.created_at.between(start, end))
+        .where(Transaction.created_at.between(start, end), Transaction.user_id == current_user.id)
         .group_by(Category.id)
         .order_by(func.sum(Transaction.amount).desc())
     )
@@ -209,7 +188,8 @@ def report_month(year: int, month: int, type: str | None = None, timezone: str =
 
 
 @router.get("/report/day")
-def report_day(year: int, month: int, day: int, type: str | None = None, timezone: str = "UTC", db: Session = Depends(get_db)):
+def report_day(year: int, month: int, day: int, type: str | None = None, timezone: str = "UTC", current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """Get daily report for the current user"""
     # Convert local date to UTC for proper timezone handling
     try:
         tz = pytz.timezone(timezone)
@@ -226,7 +206,7 @@ def report_day(year: int, month: int, day: int, type: str | None = None, timezon
     stmt = (
         select(Category.name, Category.type, func.sum(Transaction.amount).label("total"))
         .join(Category)
-        .where(Transaction.created_at.between(start, end))
+        .where(Transaction.created_at.between(start, end), Transaction.user_id == current_user.id)
         .group_by(Category.id)
         .order_by(func.sum(Transaction.amount).desc())
     )
@@ -240,11 +220,12 @@ def report_day(year: int, month: int, day: int, type: str | None = None, timezon
 
 
 @router.get("/export/csv")
-def export_csv(db: Session = Depends(get_db)):
+def export_csv(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """Export transactions as CSV for the current user"""
     rows = db.execute(
         select(
             Transaction.id, Transaction.created_at, Transaction.amount, Transaction.note, Category.name, Category.type
-        ).join(Category)
+        ).join(Category).where(Transaction.user_id == current_user.id)
     ).all()
     df = pd.DataFrame(rows, columns=["id", "created_at", "amount", "note", "category", "type"])
     buf = StringIO()

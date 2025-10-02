@@ -7,4 +7,4 @@ export { default as MenuModal } from './MenuModal';
 export { default as CategoriesView } from './CategoriesView';
 export { default as CreateCategoryView } from './CreateCategoryView';
 export { default as EditCategoryView } from './EditCategoryView';
-
+export { Login } from './Login';
