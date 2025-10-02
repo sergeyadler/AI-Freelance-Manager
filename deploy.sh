@@ -51,10 +51,9 @@ echo "🌐 Your app should be available at: https://$PROJECT_ID.appspot.com"
 # Restore original app.yaml
 mv app.yaml.bak app.yaml
 
-echo "📝 Next steps:"
+echo "📝 Next steps (if not already done):"
 echo "   1. Set up Cloud SQL database:"
 echo "      gcloud sql instances create $INSTANCE_NAME --database-version=POSTGRES_14 --tier=db-f1-micro --region=$REGION"
 echo "   2. Create database:"
 echo "      gcloud sql databases create ai_freelance_manager --instance=$INSTANCE_NAME"
 echo "   3. Update DATABASE_URL in app.yaml with your actual connection string"
-echo "   4. Deploy frontend to Firebase Hosting or Cloud Storage"

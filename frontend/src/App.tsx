@@ -14,7 +14,7 @@ import {
 } from './components';
 import { useTransactions, useNavigation, useForm } from './hooks';
 import type { TransactionType, DatePickerContext, EditFormData, Transaction, Category } from './types';
-import { API_BASE } from './lib/api';
+import { exportCSV } from './lib/api';
 import HistoryView from './components/HistoryView';
 import EntryView from './components/EntryView';
 import Header from './components/Header';
@@ -88,18 +88,15 @@ function App() {
 
   const handleExportCSV = async () => {
     try {
-      const response = await fetch(`${API_BASE}/export/csv`);
-      if (response.ok) {
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `transactions_${dayjs().format('YYYY-MM-DD')}.csv`;
-        document.body.appendChild(a);
-        a.click();
-        window.URL.revokeObjectURL(url);
-        document.body.removeChild(a);
-      }
+      const blob = await exportCSV();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `transactions_${dayjs().format('YYYY-MM-DD')}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
     } catch (error) {
       console.error('Failed to export CSV:', error);
     }

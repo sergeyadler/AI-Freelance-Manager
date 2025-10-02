@@ -5,9 +5,17 @@ entrypoint: uvicorn backend.app.main:app --host 0.0.0.0 --port $PORT
 env_variables:
   # Database configuration
   DATABASE_URL: "postgresql://app-user:AppUserPassword123!@/ai_freelance_manager?host=/cloudsql/ai-freelance-manager:europe-west1:ai-freelance-manager-db"
-  
+
   # CORS settings (allow same domain and localhost for development)
   ALLOWED_ORIGINS: "*"
+
+  # JWT Configuration
+  JWT_SECRET_KEY: "ai-freelance-manager-production-secret-key-2025-secure"
+  JWT_ALGORITHM: "HS256"
+  JWT_ACCESS_TOKEN_EXPIRE_MINUTES: "10080"
+
+  # Environment
+  ENVIRONMENT: "production"
 
 # Automatic scaling
 automatic_scaling:

@@ -1,6 +1,7 @@
 import React from 'react';
 import type { MenuModalProps } from '../types';
-import { Download, RefreshCw } from 'lucide-react';
+import { Download, RefreshCw, LogOut, User } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
 
 const MenuModal: React.FC<MenuModalProps> = ({
   isOpen,
@@ -9,6 +10,14 @@ const MenuModal: React.FC<MenuModalProps> = ({
   onExportCSV,
   onRefreshBalance
 }) => {
+  const { user, logout } = useAuth();
+
+  const handleLogout = () => {
+    if (confirm('Are you sure you want to logout?')) {
+      logout();
+    }
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -45,11 +54,47 @@ const MenuModal: React.FC<MenuModalProps> = ({
           fontSize: 20,
           fontWeight: 600
         }}>
-          Balance Summary
+          Menu
         </h2>
+        
+        {/* User Info Section */}
+        {user && (
+          <div style={{ 
+            marginBottom: 24,
+            padding: 16,
+            background: 'rgba(255,255,255,0.05)',
+            borderRadius: 8,
+            border: '1px solid rgba(255,255,255,0.1)'
+          }}>
+            <div style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: 8,
+              marginBottom: 8
+            }}>
+              <User size={16} style={{ color: '#e8e8f0' }} />
+              <div style={{ color: '#e8e8f0', fontSize: 16, fontWeight: 500 }}>
+                {user.full_name || user.email}
+              </div>
+            </div>
+            {user.full_name && (
+              <div style={{ color: '#888', fontSize: 14, marginTop: 4 }}>
+                {user.email}
+              </div>
+            )}
+          </div>
+        )}
         
         {balance && (
           <div style={{ marginBottom: 24 }}>
+            <h3 style={{ 
+              margin: '0 0 12px 0', 
+              color: '#e8e8f0',
+              fontSize: 16,
+              fontWeight: 600
+            }}>
+              Balance Summary
+            </h3>
             <div style={{ 
               display: 'flex', 
               justifyContent: 'space-between', 
@@ -127,6 +172,27 @@ const MenuModal: React.FC<MenuModalProps> = ({
           >
             <RefreshCw size={20} />
             Refresh Balance
+          </button>
+
+          <button
+            onClick={handleLogout}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              width: '100%',
+              padding: '12px 16px',
+              background: 'rgba(255,68,68,0.1)',
+              border: '1px solid rgba(255,68,68,0.3)',
+              borderRadius: 8,
+              color: '#ff4444',
+              cursor: 'pointer',
+              fontSize: 16,
+              marginTop: 8
+            }}
+          >
+            <LogOut size={20} />
+            Logout
           </button>
         </div>
       </div>
